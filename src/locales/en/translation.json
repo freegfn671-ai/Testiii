@@ -1,0 +1,41 @@
+{
+  "header": {
+    "quests": "Quest Finder",
+    "gifts": "Gift Cards",
+    "rating": "Community Rating",
+    "map": "Map",
+    "players": "For Players",
+    "organizers": "For Organizers"
+  },
+  "hero": {
+    "title": "Escape Rooms in Tbilisi",
+    "subtitle": "Find the best escape rooms, horror experiences, and adventures in Georgia",
+    "cta": "Show Quests",
+    "kids": "Kids Quest",
+    "horror": "Horror Quest",
+    "actors": "Quest With Actors",
+    "detective": "Detective Quest"
+  },
+  "home": {
+    "categories": "Categories",
+    "popular": "Popular Quests in Tbilisi",
+    "reviews": "Latest Reviews",
+    "news": "Quest Georgia News",
+    "popular_searches": "Popular Searches",
+    "book_now": "Book Now",
+    "from": "from"
+  },
+  "footer": {
+    "description": "The largest quest marketplace in Georgia.",
+    "privacy": "Privacy Policy",
+    "faq": "FAQ",
+    "add_quest": "Add Quest"
+  },
+  "admin": {
+    "save": "Save",
+    "saving": "Saving...",
+    "pricePerPerson": "Price per person",
+    "pricePerTeam": "Price per team",
+    "questSaved": "Quest saved successfully"
+  }
+}
