@@ -2,10 +2,9 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
 
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT as string, 10) || 3000;
 const app = express();
 
 app.use(express.json());
@@ -282,12 +281,19 @@ app.put("/api/bookings/:id", (req, res) => {
 
 // Start Server with Vite Middleware
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+  const isProd = process.env.NODE_ENV === "production" || fs.existsSync(path.join(process.cwd(), "dist", "index.html"));
+
+  if (!isProd) {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (err) {
+      console.log("Ensure you have vite installed in dev");
+    }
   } else {
     // Note: express has a quirk where app.get('*', ...) should be used in prod
     const distPath = path.join(process.cwd(), 'dist');
@@ -298,7 +304,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
