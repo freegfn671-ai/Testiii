@@ -42,12 +42,15 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (activeTab === "users" && userData?.role === "admin") {
-      fetch("/api/admin/users", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-        .then((r) => r.json())
-        .then(setUsersList)
-        .catch(console.error);
+      import("firebase/firestore").then(({ collection, getDocs }) => {
+        import("../lib/firebase").then(({ db }) => {
+           getDocs(collection(db, "users"))
+             .then(snap => {
+                setUsersList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+             })
+             .catch(console.error);
+        });
+      });
     }
   }, [activeTab, userData]);
 
@@ -284,27 +287,34 @@ export default function AdminDashboard() {
                       e.preventDefault();
                       const formdata = new FormData(e.target);
                       try {
-                        await fetch("/api/admin/managers", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                          },
-                          body: JSON.stringify(
-                            Object.fromEntries(formdata.entries()),
-                          ),
+                        // Dynamically import to keep it clean
+                        const { doc, setDoc } = await import("firebase/firestore");
+                        const { db } = await import("../lib/firebase");
+                        
+                        // Fake a UID for now since we don't have secondary auth setup
+                        const fakeUid = "manager_" + Date.now();
+                        
+                        await setDoc(doc(db, "users", fakeUid), {
+                          id: fakeUid,
+                          name: formdata.get("name"),
+                          email: formdata.get("email"),
+                          company: formdata.get("company"),
+                          phone: formdata.get("phone"),
+                          city: formdata.get("city"),
+                          role: "manager",
+                          verified: true,
+                          createdAt: Date.now()
                         });
+                        
                         e.target.reset();
-                        alert("Manager Created!");
-                        fetch("/api/admin/users", {
-                          headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                          },
-                        })
-                          .then((r) => r.json())
-                          .then(setUsersList);
-                      } catch (e) {
-                        alert("Error: " + e.message);
+                        alert("Manager Created in Database! (Auth not implemented without admin SDK)");
+                        
+                        // Refresh the list
+                        const { collection, getDocs } = await import("firebase/firestore");
+                        const snap = await getDocs(collection(db, "users"));
+                        setUsersList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                      } catch (err) {
+                        alert("Error: " + err.message);
                       }
                     }}
                   >
@@ -392,17 +402,12 @@ export default function AdminDashboard() {
                               <button
                                 onClick={() => {
                                   if (window.confirm("Delete user?")) {
-                                    fetch(`/api/admin/users/${u.id}`, {
-                                      method: "DELETE",
-                                      headers: {
-                                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                                      },
-                                    }).then(() => {
-                                      setUsersList(
-                                        usersList.filter(
-                                          (user) => user.id !== u.id,
-                                        ),
-                                      );
+                                    import("firebase/firestore").then(({ doc, deleteDoc }) => {
+                                      import("../lib/firebase").then(({ db }) => {
+                                        deleteDoc(doc(db, "users", u.id)).then(() => {
+                                          setUsersList(usersList.filter((user) => user.id !== u.id));
+                                        });
+                                      });
                                     });
                                   }
                                 }}

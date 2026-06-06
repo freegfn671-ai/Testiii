@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Copy, Users, Star, Trophy, Target, Sparkles, Medal } from "lucide-react";
 import { motion } from "motion/react";
 import { useAuthStore } from "../hooks/useAuthStore";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 export default function Leaderboard() {
   const [leaders, setLeaders] = useState([]);
@@ -9,16 +11,26 @@ export default function Leaderboard() {
   const { userData } = useAuthStore();
 
   useEffect(() => {
-    fetch("/api/leaderboard")
-      .then(res => res.json())
-      .then(data => {
-        setLeaders(data.topExplorers || []);
+    const fetchLeaders = async () => {
+      try {
+        const usersRef = collection(db, "users");
+        const q = query(
+          usersRef,
+          where("role", "==", "user"),
+          orderBy("xp", "desc"),
+          limit(10)
+        );
+        const querySnapshot = await getDocs(q);
+        const fetchedLeaders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLeaders(fetchedLeaders);
+      } catch (e) {
+        console.error("Error fetching leaderboard", e);
+      } finally {
         setLoading(false);
-      })
-      .catch((e) => {
-        console.error(e);
-        setLoading(false);
-      });
+      }
+    };
+    
+    fetchLeaders();
   }, []);
 
   return (

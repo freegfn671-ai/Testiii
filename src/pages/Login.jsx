@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../hooks/useAuthStore";
+import { auth, db } from "../lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -30,50 +33,56 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userDocRef = doc(db, "users", userCredential.user.uid);
+        const userDocSnap = await getDoc(userDocRef);
         
-        let data;
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          data = await res.json();
-        } else {
-          throw new Error(`Server error ${res.status}. Expected JSON, but received HTML or empty response. If you just deployed, make sure your backend server is actually running and connected, not just the static frontend.`);
+        let dbUserData = { role: 'user' };
+        if (userDocSnap.exists()) {
+          dbUserData = userDocSnap.data();
         }
         
-        if (!res.ok) throw new Error(data.error || "Failed to log in");
-        loginFn(data.token, data.user);
+        loginFn(userCredential.user, dbUserData);
         
-        if (data.user.role === 'admin') navigate("/admin");
-        else if (data.user.role === 'manager') navigate("/manager");
+        if (dbUserData.role === 'admin') navigate("/admin");
+        else if (dbUserData.role === 'manager') navigate("/manager");
         else navigate("/");
       } else {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name, referredBy: referredBy || undefined })
-        });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        let data;
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          data = await res.json();
-        } else {
-          throw new Error(`Server error ${res.status}. Expected JSON, but received HTML or empty response. If you just deployed, make sure your backend server is actually running and connected, not just the static frontend.`);
-        }
+        // Setup initial user document
+        const role = email.toLowerCase() === "admin@admin.com" || email.toLowerCase() === "alexmargania31@gmail.com" ? "admin" : "user";
+        const referralCode = "QG" + Math.random().toString(36).substring(2, 8).toUpperCase();
         
-        if (!res.ok) throw new Error(data.error || "Failed to register");
-        loginFn(data.token, data.user);
+        const dbUserData = {
+          id: userCredential.user.uid,
+          email,
+          name,
+          role,
+          referralCode,
+          referredBy: referredBy || null,
+          xp: 0,
+          level: 1,
+          rank: 'Beginner Explorer',
+          completedQuests: 0,
+          achievements: [],
+          createdAt: Date.now()
+        };
         
-        if (data.user.role === 'admin') navigate("/admin");
-        else if (data.user.role === 'manager') navigate("/manager");
+        await setDoc(doc(db, "users", userCredential.user.uid), dbUserData);
+        loginFn(userCredential.user, dbUserData);
+        
+        if (role === 'admin') navigate("/admin");
+        else if (role === 'manager') navigate("/manager");
         else navigate("/");
       }
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError("Email/Password Sign-in is not enabled. Please enable it in the Firebase Console under Authentication -> Sign-in method.");
+      } else {
+        setError(err.message || "Failed to authenticate");
+      }
     } finally {
       setLoading(false);
     }

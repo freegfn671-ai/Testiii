@@ -3,6 +3,8 @@ import { useAuthStore } from "../hooks/useAuthStore";
 import { X, Calendar, Clock, CreditCard, Banknote } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 export default function BookingModal({ quest, isOpen, onClose, selectedSlot }) {
   const { user, userData } = useAuthStore();
@@ -17,8 +19,8 @@ export default function BookingModal({ quest, isOpen, onClose, selectedSlot }) {
     if (userData && isOpen) {
       setFormData(prev => ({
         ...prev,
-        name: userData.displayName || prev.name,
-        email: user?.email || prev.email,
+        name: userData.name || prev.name,
+        email: userData.email || prev.email,
         phone: userData.phone || prev.phone
       }));
     }
@@ -53,7 +55,7 @@ export default function BookingModal({ quest, isOpen, onClose, selectedSlot }) {
     try {
       const payload = {
         questId: quest.id || quest.slug,
-        questName: quest.title,
+        questTitle: quest.title,
         date: selectedSlot ? selectedSlot.date.toISOString() : (formData.date ? new Date(formData.date).toISOString() : null),
         time: selectedSlot ? selectedSlot.time : formData.time,
         name: formData.name,
@@ -61,7 +63,10 @@ export default function BookingModal({ quest, isOpen, onClose, selectedSlot }) {
         phone: formData.phone,
         participants: Number(formData.players),
         totalPrice: calculatePrice(),
-        status: "pending"
+        status: "pending",
+        userId: user?.uid || null,
+        questOwnerId: quest?.ownerId || null,
+        questOwnerName: quest?.ownerName || null,
       };
       
       const res = await fetch("/api/bookings", {

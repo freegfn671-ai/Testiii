@@ -27,7 +27,7 @@ export function QuestProvider({ children }) {
       
       setQuests([...fetchedQuests, ...mergedDEMO]);
     } catch (e) {
-      console.error("SQL fetch error, falling back to DEMO", e);
+      console.error("Local API fetch error, falling back to DEMO", e);
       setQuests(DEMO_QUESTS);
     } finally {
       setLoading(false);
@@ -36,7 +36,7 @@ export function QuestProvider({ children }) {
 
   useEffect(() => {
     refetchQuests();
-    // Poll every 10 seconds as a simple replacement for real-time
+    // Poll every 10 seconds to keep fresh
     const interval = setInterval(refetchQuests, 10000);
     return () => clearInterval(interval);
   }, []);

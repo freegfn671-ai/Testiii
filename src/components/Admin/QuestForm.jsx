@@ -158,10 +158,52 @@ export default function QuestForm({ initialData = null, onSuccess, onCancel }) {
     </motion.div>
   );
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const toastId = toast.loading("Uploading image...");
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd
+      });
+      
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      
+      // Update form value
+      register("imageUrl").onChange({
+        target: { name: "imageUrl", value: data.url }
+      });
+      // Workaround for react-hook-form to set the value properly
+      const ele = document.querySelector('input[name="imageUrl"]');
+      if (ele) {
+         ele.value = data.url;
+         // Trigger change
+         const event = new Event('input', { bubbles: true });
+         ele.dispatchEvent(event);
+      }
+      
+      toast.success("Image uploaded", { id: toastId });
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
+
   const MediaStep = () => (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-      <div><label className="block text-sm font-medium text-gray-400 mb-1">Cover Image URL</label><input {...register("imageUrl", { required: true })} className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-purple-500 outline-none" /></div>
-      <div><label className="block text-sm font-medium text-gray-400 mb-1">Gallery Image URLs (comma separated)</label><textarea {...register("images")} className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-purple-500 outline-none h-32" /></div>
+      <div>
+        <label className="block text-sm font-medium text-gray-400 mb-1">Upload Cover Image</label>
+        <input type="file" accept="image/*" onChange={handleFileUpload} className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white mb-2" />
+        
+        <label className="block text-sm font-medium text-gray-400 mb-1 mt-4">Or Enter Cover Image URL manually</label>
+        <input {...register("imageUrl", { required: true })} className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-purple-500 outline-none" />
+      </div>
+      <div><label className="block text-sm font-medium text-gray-400 mb-1 mt-4">Gallery Image URLs (comma separated)</label><textarea {...register("images")} className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-purple-500 outline-none h-32" /></div>
     </motion.div>
   );
 

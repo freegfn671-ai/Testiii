@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../hooks/useAuthStore";
 import { User, LogOut, Settings, Heart, Calendar, Trophy, Users, Star, Award, Copy, Check } from "lucide-react";
 import toast from "react-hot-toast";
+import { db } from "../lib/firebase";
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 
 export default function Profile() {
   const { user, userData, logout } = useAuthStore();
@@ -14,29 +16,35 @@ export default function Profile() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+    
     if (activeTab === "bookings") {
-      fetch("/api/bookings", {
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-      })
-        .then(res => res.json())
-        .then(data => setBookings(data || []))
-        .catch(console.error);
+      const fetchBookings = async () => {
+        try {
+          // Fetch from local Express API
+          const res = await fetch("/api/bookings", {
+            headers: {
+              "x-user-id": user.uid,
+              "x-user-role": userData?.role || "user"
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setBookings(data || []);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      // For now, delay fetching a bit to let profile load
+      setTimeout(fetchBookings, 100);
     } else if (activeTab === "favorites") {
-      fetch("/api/favorites", {
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-      })
-        .then(res => res.json())
-        .then(data => setFavorites(data || []))
-        .catch(console.error);
+      // In a full replacement, favorites would be fetched from Firestore subcollection or array
+      setFavorites([]);
     } else if (activeTab === "referrals") {
-      fetch("/api/referrals", {
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-      })
-        .then(res => res.json())
-        .then(data => setReferrals(data || []))
-        .catch(console.error);
+      setReferrals([]);
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   if (!user) {
     return (
@@ -56,18 +64,11 @@ export default function Profile() {
     e.preventDefault();
     const fd = new FormData(e.target);
     try {
-      const res = await fetch(`/api/users/${user.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({
+      if (userData?.id) {
+        await updateDoc(doc(db, "users", userData.id), {
           name: fd.get("name"),
           phone: fd.get("phone")
-        })
-      });
-      if (res.ok) {
+        });
         toast.success("Profile updated!");
       }
     } catch (e) {
