@@ -4,11 +4,6 @@ import multer from "multer";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
-import { fileURLToPath } from "url";
-
-// Set up __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 const app = express();
@@ -16,7 +11,7 @@ const app = express();
 app.use(express.json());
 
 // Setup local uploads
-const UPLOADS_DIR = path.join(__dirname, "uploads");
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -48,7 +43,7 @@ const upload = multer({
 });
 
 // Setup local SQLite Database (No PostgreSQL/Prisma)
-const dbPath = path.join(__dirname, "local.db");
+const dbPath = path.join(process.cwd(), "local.db");
 const db = new Database(dbPath);
 
 // Initialize simple tables
@@ -295,7 +290,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     // Note: express has a quirk where app.get('*', ...) should be used in prod
-    const distPath = path.join(__dirname, 'dist');
+    const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
